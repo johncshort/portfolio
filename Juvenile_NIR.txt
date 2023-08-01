@@ -1,0 +1,202 @@
+Sub Juvenile_NIR()
+    
+    ' Verify the Workbook Contains the Allowed Values Sheet
+    If ActiveWorkbook.Worksheets.count = 1 Then
+        MsgBox "Workbook must contain Allowed Values sheet."
+        End
+    End If
+    
+    ' Rename Sheet
+    Worksheets(1).Name = "Raw"
+    
+    ' Format All Columns as Text
+    Worksheets("Raw").Columns("A:ZZ").NumberFormat = "@"
+    
+    ' Clear Null Strings
+    With Worksheets("Raw").Range("A1:ZZ100")
+        .Value = .Value
+    End With
+    
+    ' Create New Sheet, Format All Columns as Text
+    Sheets.Add(After:=Worksheets("Raw")).Name = "Clean"
+    Worksheets("Clean").Columns("A:ZZ").NumberFormat = "@"
+    
+    ' Declare Variables
+    Dim rawSheet As Worksheet
+    Dim cleanSheet As Worksheet
+    
+    Dim rowRaw As Integer
+    Dim colRaw As Integer
+    Dim rowClean As Integer
+    Dim headRow As Integer
+    Dim headCol As Integer
+    Dim colCount As Integer
+    Dim rowCount As Integer
+    
+    Dim isNewCategory As Boolean
+    Dim isFirst As Boolean
+    
+    Dim productAttString As String
+    Dim listRange As Range
+    
+    ' Initialize Variables
+    Set rawSheet = Sheets("Raw")
+    Set cleanSheet = Sheets("Clean")
+    
+    rowClean = 2
+    rowRaw = 2
+    headRow = 1
+    colCount = rawSheet.Cells(1, Columns.count).End(xlToLeft).Column
+    rowCount = rawSheet.Cells(Rows.count, 1).End(xlUp).Row
+
+    isNewCategory = True
+    isFirst = True
+    
+    ' Find and Delete Item ID and Reportable UPC Columns
+    For i = 1 To colCount
+        Select Case rawSheet.Cells(1, i)
+            Case "ITEMID"
+                rawSheet.Columns(i).Delete
+            Case "REPORTABLEUPC"
+                rawSheet.Columns(i).Delete
+        End Select
+    Next i
+
+    ' Loop Through Rows
+    Do Until IsEmpty(rawSheet.Cells(rowRaw, 1))
+    
+        ' Transcribe and Format Universal Headers
+        If isFirst Then
+            ' Format Headers (text)
+            cleanSheet.Rows(headRow).Font.Size = 12
+            cleanSheet.Rows(headRow).Font.Color = vbWhite
+            cleanSheet.Rows(headRow).Font.FontStyle = "Bold"
+            
+            ' Transcribe and Format Headers (fill)
+            cleanSheet.Cells(headRow, 1).Value = StrConv(rawSheet.Cells(1, 1).Value, vbProperCase)
+            cleanSheet.Cells(headRow, 1).Interior.Color = RGB(26, 82, 118)
+            cleanSheet.Cells(headRow, 2).Value = StrConv(rawSheet.Cells(1, 2).Value, vbProperCase)
+            cleanSheet.Cells(headRow, 2).Interior.Color = RGB(26, 82, 118)
+            cleanSheet.Cells(headRow, 3).Value = StrConv(rawSheet.Cells(1, 3).Value, vbProperCase)
+            cleanSheet.Cells(headRow, 3).Interior.Color = RGB(26, 82, 118)
+            cleanSheet.Cells(headRow, 4).Value = StrConv(rawSheet.Cells(1, 4).Value, vbProperCase)
+            cleanSheet.Cells(headRow, 4).Interior.Color = RGB(26, 82, 118)
+
+            ' Clear Flag
+            isFirst = False
+        End If
+        
+        ' Transcribe Universal Values
+        cleanSheet.Cells(rowClean, 1).Value = rawSheet.Cells(rowRaw, 1).Value
+        cleanSheet.Cells(rowClean, 2).Value = rawSheet.Cells(rowRaw, 2).Value
+        cleanSheet.Cells(rowClean, 3).Value = rawSheet.Cells(rowRaw, 3).Value
+        cleanSheet.Cells(rowClean, 4).Value = rawSheet.Cells(rowRaw, 4).Value
+        
+        ' Loop Through Columns
+        headCol = 5
+        For colRaw = 5 To colCount
+            ' Find Non-Empty Cells
+            If Not IsEmpty(rawSheet.Cells(rowRaw, colRaw)) Then
+                ' First Row
+                If isNewCategory Then
+                    ' Paste and Fill Header
+                    cleanSheet.Cells(headRow, headCol).Value = rawSheet.Cells(1, colRaw).Value
+                    cleanSheet.Cells(headRow, headCol).Interior.Color = RGB(41, 128, 185)
+                    ' Paste Value
+                    cleanSheet.Cells(rowClean, headCol).Value = rawSheet.Cells(rowRaw, colRaw).Value
+                    'Add Data Validation
+                    productAttString = rawSheet.Cells(1, colRaw).Value
+                    For i = 1 To 92
+                        If productAttString = Worksheets("Allowed Values").Cells(1, i) Then
+                            Set listRange = Worksheets("Allowed Values").Range(Worksheets("Allowed Values").Cells(2, i), Worksheets("Allowed Values").Cells(Worksheets("Allowed Values").Cells(Rows.count, i).End(xlUp).Row, i))
+                            Exit For
+                        'If Attribute Not Found, Don't Add Validation
+                        ElseIf i = 92 Then
+                         GoTo Line0
+                        End If
+                    Next i
+                    cleanSheet.Cells(rowClean, headCol).Validation.Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Formula1:="='" & Worksheets("Allowed Values").Name & "'!" & listRange.Address
+Line0:
+                    ' Increment Index Variable
+                    headCol = headCol + 1
+                ' Subsequent Rows
+                Else
+                    headCol = 5
+                    ' Loop Through Column Headers
+                    Do Until IsEmpty(cleanSheet.Cells(headRow, headCol))
+                        ' Headers Match
+                        If cleanSheet.Cells(headRow, headCol).Value = rawSheet.Cells(1, colRaw).Value Then
+                            'Paste Value
+                            cleanSheet.Cells(rowClean, headCol).Value = rawSheet.Cells(rowRaw, colRaw).Value
+                            'Add Data Validation
+                            productAttString = rawSheet.Cells(1, colRaw).Value
+                            For i = 1 To 92
+                                If productAttString = Worksheets("Allowed Values").Cells(1, i) Then
+                                    Set listRange = Worksheets("Allowed Values").Range(Worksheets("Allowed Values").Cells(2, i), Worksheets("Allowed Values").Cells(Worksheets("Allowed Values").Cells(Rows.count, i).End(xlUp).Row, i))
+                                    Exit For
+                                'If Attribute Not Found, Don't Add Validation
+                                ElseIf i = 92 Then
+                                    GoTo Line1
+                                End If
+                            Next i
+                            cleanSheet.Cells(rowClean, headCol).Validation.Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Formula1:="='" & Worksheets("Allowed Values").Name & "'!" & listRange.Address
+Line1:
+                            Exit Do
+                        End If
+                        ' Headers Don't Match
+                        If IsEmpty(cleanSheet.Cells(headRow, headCol + 1)) Then
+                            ' Paste Header
+                            cleanSheet.Cells(headRow, headCol + 1).Value = rawSheet.Cells(1, colRaw).Value
+                            cleanSheet.Cells(headRow, headCol + 1).Interior.Color = RGB(41, 128, 185)
+                            ' Paste Value
+                            cleanSheet.Cells(rowClean, headCol + 1).Value = rawSheet.Cells(rowRaw, colRaw).Value
+                            'Add Data Validation
+                            productAttString = rawSheet.Cells(1, colRaw).Value
+                            For i = 1 To 92
+                                If productAttString = Worksheets("Allowed Values").Cells(1, i) Then
+                                    Set listRange = Worksheets("Allowed Values").Range(Cells(2, i), Cells(Worksheets("Allowed Values").Cells(Rows.count, i).End(xlUp).Row, i))
+                                    Exit For
+                                'If Attribute Not Found, Don't Add Validation
+                                ElseIf i = 92 Then
+                                    GoTo Line2
+                                End If
+                            Next i
+                            cleanSheet.Cells(rowClean, headCol + 1).Validation.Add Type:=xlValidateList, AlertStyle:=xlValidAlertStop, Formula1:="='" & Worksheets("Allowed Values").Name & "'!" & listRange.Address
+Line2:
+                            Exit Do
+                        End If
+                        ' Increment Index Variable
+                        headCol = headCol + 1
+                    Loop
+                End If
+            End If
+        Next colRaw
+        
+        ' Detect New Category
+        If rawSheet.Cells(rowRaw, 1) <> rawSheet.Cells(rowRaw + 1, 1) Then
+            ' New Category
+            headRow = rowClean + 3
+            rowClean = rowClean + 4
+            isNewCategory = True
+            isFirst = True
+        Else
+            ' Not New Category
+            rowClean = rowClean + 1
+            isNewCategory = False
+        End If
+            
+        ' Increment Loop Condition
+        rowRaw = rowRaw + 1
+    Loop
+    
+    ' Autofit Columns
+    cleanSheet.Columns("A:ZZ").AutoFit
+    
+    ' Freeze Panes
+    cleanSheet.Columns(4).Select
+    ActiveWindow.FreezePanes = True
+    
+    ' Center Window
+    cleanSheet.Cells(1, 1).Select
+
+End Sub
