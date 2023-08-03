@@ -1,0 +1,120 @@
+Option Explicit
+Sub PBEV_NIC()
+
+'Run Confirm
+Dim confirmation As VbMsgBoxResult
+    confirmation = MsgBox("Are you sure you want to run macro?", vbYesNo, "Confirmation")
+             
+If confirmation = vbYes Then
+
+'Prep
+ActiveSheet.Copy After:=Worksheets(Sheets.count) 'Duplicate Sheet
+ActiveSheet.Name = "Clean" 'Rename Sheet
+'Worksheets("Clean").ListObjects(1).Unlist 'Remove Table
+Worksheets("Clean").Range("A:ZZ").ClearFormats 'Remove Formatting
+
+'Variables
+Dim j As Integer
+Dim subStringArray() As String
+Dim numRows As Integer
+    numRows = Range("A2", Range("A2").End(xlDown)).Rows.count 'Count Rows
+Dim numCols As Integer
+    numCols = Cells(1, Columns.count).End(xlToLeft).Column 'Count Columns
+Dim i As Integer
+    i = 1 ' Initialize Counter Variable
+
+'Processing
+Do While (i < numCols + 1)
+    Select Case Cells(1, i)
+        Case "Title"
+            Cells(1, 1) = "UPC12"
+            Cells(1, i + 1).EntireColumn.Insert 'Insert New Column
+            Cells(1, i + 1).EntireColumn.Insert 'Insert New Column
+            Cells(1, i + 1).EntireColumn.Insert 'Insert New Column
+            Cells(1, i + 1) = "MEGA_CATEGORY" 'Rename Column Header
+            Cells(1, i + 2) = "SEGMENT" 'Rename Column Header
+            Cells(1, i + 3) = "CATEGORY" 'Rename Column Header
+            For j = 2 To (numRows + 2) 'Iterate Through Rows
+                If Not IsEmpty(Cells(j, numCols)) Then
+                    Cells(j, i + 1) = "BEVERAGE" 'Insert Segment Value
+                    Cells(j, i + 2) = "BEVERAGE" 'Insert Mega Category Value
+                    Cells(j, i + 3) = "PERSONAL BEVERAGE" 'Insert Category Value
+                End If
+            Next
+            i = i + 3 'Increment Counter to Skip Added Columns
+            numCols = numCols + 3 'Increment numCols for Added Columns
+        Case "SubCat_Type"
+            Cells(1, i + 1).EntireColumn.Insert 'Insert New Column
+            Cells(1, i) = "SUB-CATEGORY" 'Rename Column Header
+            Cells(1, i + 1) = "TYPE" 'Rename Column Header
+            For j = 2 To (numRows + 2) 'Iterate Through Rows
+                If Not IsEmpty(Cells(j, i)) Then
+                    subStringArray = Split(Cells(j, i), "_") 'Split String
+                    Cells(j, i) = subStringArray(0) ' Insert Subcat Substring
+                    Cells(j, i + 1) = subStringArray(1) 'Insert Type Substring
+                End If
+            Next
+            i = i + 1 'Increment Counter to Skip Added Columns
+            numCols = numCols + 1 'Increment numCols for Added Columns
+        Case "ProdLine_SubBrand_Brand"
+            Cells(1, i + 1).EntireColumn.Insert 'Insert New Column
+            Cells(1, i + 1).EntireColumn.Insert 'Insert New Column
+            Cells(1, i) = "BRAND" 'Rename Column Header
+            Cells(1, i + 1) = "SUB-BRAND" 'Rename Column Header
+            Cells(1, i + 2) = "PRODUCT_LINE" 'Rename Column Header
+            For j = 2 To (numRows + 2) 'Iterate Through Rows
+                If Not IsEmpty(Cells(j, i)) Then
+                    subStringArray = Split(Cells(j, i), "_")
+                    Cells(j, i) = subStringArray(2) 'Insert Brand Substring
+                    Cells(j, i + 1) = subStringArray(2) & " " & subStringArray(1) 'Insert Subbrand Substring
+                    Cells(j, i + 2) = subStringArray(2) & " " & subStringArray(1) & " " & subStringArray(0) 'Insert Product Line Substring
+                End If
+            Next
+            i = i + 2 'Increment Counter to Skip Added Columns
+            numCols = numCols + 2 'Increment numCols for Added Columns
+        Case "Capacity"
+            Cells(1, i) = "CAPACITY"
+        Case "Count"
+            Cells(1, i) = "COUNT"
+            Cells(1, i + 1).EntireColumn.Insert 'Insert New Column
+            Cells(1, i + 1) = "PACK_TYPE" 'Rename Column Header
+            For j = 2 To (numRows + 2) 'Iterate Through Rows
+                If Not IsEmpty(Cells(j, i)) Then
+                    If (Cells(j, i) = "1 CT") Then
+                        Cells(j, i + 1) = "SINGLE" 'Insert Pack Type Value
+                    Else
+                        Cells(j, i + 1) = "MULTIPACK" 'Insert Pack Type Value
+                    End If
+                End If
+            Next
+            i = i + 1 'Increment Counter to Skip Added Columns
+            numCols = numCols + 1 'Increment numCols for Added Columns
+        Case "Color"
+            Cells(1, i) = "COLOR"
+        Case "License Type"
+            Cells(1, i) = "LICENSE_TYPE"
+        Case "Mechanism"
+            Cells(1, i) = "MECHANISM"
+        Case "Material"
+            Cells(1, i) = "MATERIAL"
+        Case "Use Occasion"
+            Cells(1, i) = "USE_OCCASION"
+        Case "Item Type"
+            Cells(j, i).EntireColumn.Delete 'Delete Column
+            i = i - 1 'Decrement Counter
+            numCols = numCols - 1 'Decrement numCols for Deleted Columns
+        Case "Path"
+            Cells(j, i).EntireColumn.Delete 'Delete Column
+            i = i - 1 'Decrement Counter
+            numCols = numCols - 1 'Decrement numCols for Deleted Columns
+    End Select
+    i = i + 1 'Increment Counter
+Loop 'End Do While
+
+'Packaging
+Worksheets("Clean").Cells.EntireColumn.AutoFit 'Autofit Columns
+Worksheets("Clean").Cells.EntireRow.AutoFit 'Autofit Rows
+
+End If 'Run Confirmation
+
+End Sub
