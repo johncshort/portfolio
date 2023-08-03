@@ -1,0 +1,318 @@
+Sub GKM_Macro()
+
+'Run Confirm
+Dim confirmation As VbMsgBoxResult
+    confirmation = MsgBox("Are you sure you want to run macro?", vbYesNo, "Confirmation")
+             
+If confirmation <> vbYes Then
+    End
+End If
+
+'Variables
+Dim i, j As Integer
+Dim num As Double
+Dim startMonth, startDay As Integer
+Dim endMonth, endDay As Integer
+Dim startDate, endDate As Date
+Dim numRows As Integer
+Dim yearlySum As Double
+Dim errorArray() As Boolean
+Dim hasEndDate As Boolean
+Dim errorFlag As Boolean
+
+'Prep
+Worksheets("New Units").Select
+
+'Protect Worksheet
+'Sheets("New Units").Protect Password:="MIDA", UserInterfaceOnly:=True
+
+If Not IsEmpty(Range("D5")) Then
+    numRows = Range("D5", Range("D5").End(xlDown)).Rows.count
+Else
+    MsgBox "There are no entries."
+    End
+End If
+ReDim errorArray(5 To (numRows + 4))
+    
+'Processing
+For i = 5 To (numRows + 4)
+
+        'Recolor Input Columns
+        'SKU
+        Cells(i, 4).Interior.Color = RGB(217, 225, 242)
+        'Ship Date
+        Cells(i, 9).Interior.Color = RGB(217, 225, 242)
+        'End Date
+        Cells(i, 10).Interior.Color = RGB(217, 225, 242)
+        'Total Store Count
+        Cells(i, 39).Interior.Color = RGB(217, 225, 242)
+        'Growth % Y1 to Y2
+        Cells(i, 80).Interior.Color = RGB(217, 225, 242)
+        'Growth % Y2 to Y3
+        Cells(i, 82).Interior.Color = RGB(217, 225, 242)
+
+        'Initialize errorArray and errorFlag
+        errorArray(i) = False
+        errorFlag = False
+
+        'Error Check Empty Ship Date
+        If Cells(i, 9) = 0 Then
+            errorArray(i) = True
+            errorFlag = True
+        'Initialize Start Day/Month/Date Variables
+        Else
+            Select Case WorksheetFunction.IsoWeekNum(Cells(i, 9))
+                Case 1, 2, 3, 4
+                    startMonth = 1
+                Case 5, 6, 7, 8
+                    startMonth = 2
+                Case 9, 10, 11, 12, 13
+                    startMonth = 3
+                Case 14, 15, 16, 17
+                    startMonth = 4
+                Case 18, 19, 20, 21
+                    startMonth = 5
+                Case 22, 23, 24, 25, 26
+                    startMonth = 6
+                Case 27, 28, 29, 30
+                    startMonth = 7
+                Case 31, 32, 33, 34
+                    startMonth = 8
+                Case 35, 36, 37, 38, 39
+                    startMonth = 9
+                Case 40, 41, 42, 43
+                    startMonth = 10
+                Case 44, 45, 46, 47
+                    startMonth = 11
+                Case 48, 49, 50, 51, 52
+                    startMonth = 12
+            End Select
+            startDay = Day(Cells(i, 9))
+            startDate = Cells(i, 9)
+        End If
+        
+        'No Promo End Date
+        If Cells(i, 10) = 0 Then
+            hasEndDate = False
+            endMonth = 0
+            endDay = 0
+        'Has Promo End Date
+        Else
+            Select Case WorksheetFunction.IsoWeekNum(Cells(i, 10))
+                Case 1, 2, 3, 4
+                    endMonth = 1
+                Case 5, 6, 7, 8
+                    endMonth = 2
+                Case 9, 10, 11, 12, 13
+                    endMonth = 3
+                Case 14, 15, 16, 17
+                    endMonth = 4
+                Case 18, 19, 20, 21
+                    endMonth = 5
+                Case 22, 23, 24, 25, 26
+                    endMonth = 6
+                Case 27, 28, 29, 30
+                    endMonth = 7
+                Case 31, 32, 33, 34
+                    endMonth = 8
+                Case 35, 36, 37, 38, 39
+                    endMonth = 9
+                Case 40, 41, 42, 43
+                    endMonth = 10
+                Case 44, 45, 46, 47
+                    endMonth = 11
+                Case 48, 49, 50, 51, 52
+                    endMonth = 12
+            End Select
+            hasEndDate = True
+            endDay = Day(Cells(i, 10))
+            endDate = Cells(i, 10)
+        End If
+        
+        'Error Check Start Month > End Month
+        If hasEndDate And endMonth < startMonth Then
+            errorArray(i) = True
+            errorFlag = True
+        End If
+        
+        ' Start Year <> End Year
+        If hasEndDate And Year(startDate) <> Year(endDate) Then
+            errorArray(i) = True
+            errorFlag = True
+        End If
+        
+        'Color Dates Red if Error
+        If errorFlag Then
+            Cells(i, 9).Interior.Color = RGB(244, 113, 116)
+            Cells(i, 10).Interior.Color = RGB(244, 113, 116)
+        End If
+        
+        'Error Check Total Store Count
+        If Cells(i, 39) = 0 Then
+            Cells(i, 39).Interior.Color = RGB(244, 113, 116)
+            errorArray(i) = True
+            errorFlag = True
+        End If
+        
+        'Error Check % Growth
+        If Not hasEndDate Then
+            'Y1 to Y2
+            If Cells(i, 80) = 0 Then
+                Cells(i, 80).Interior.Color = RGB(244, 113, 116)
+                errorArray(i) = True
+                errorFlag = True
+            End If
+            'Y2 to Y3
+            If Cells(i, 82) = 0 Then
+                Cells(i, 82).Interior.Color = RGB(244, 113, 116)
+                errorArray(i) = True
+                errorFlag = True
+            End If
+        End If
+        
+        'Error Found, Skip Remaining Columns in Row
+        If errorFlag Then
+            GoTo Line
+        End If
+        
+        'Initialize yearlySum
+        yearlySum = 0
+        
+        'Loop Through Months
+        For j = 0 To 11
+        
+            'Recolor Input Columns
+            Cells(i, j + 41).Interior.Color = RGB(217, 225, 242)
+            Cells(i, j + 54).Interior.Color = RGB(217, 225, 242)
+            
+            'Check % Store Selling for Values > 100%
+            If Cells(i, j + 41) > 1 Then
+                Cells(i, j + 41).Interior.Color = RGB(244, 113, 116)
+                errorArray(i) = True
+                errorFlag = True
+            End If
+            
+            'Check Before Ship Date
+            If (j + 1) < startMonth Then
+                '% Stores Selling
+                If Cells(i, j + 41) <> 0 Then
+                    Cells(i, j + 41).Interior.Color = RGB(244, 113, 116)
+                    errorArray(i) = True
+                    errorFlag = True
+                End If
+                'Units Per Store
+                If Cells(i, j + 54) <> 0 Then
+                    Cells(i, j + 54).Interior.Color = RGB(244, 113, 116)
+                    errorArray(i) = True
+                    errorFlag = True
+                End If
+            'Check After Ship Date, Before Promo End Date or No Promo End Date
+            ElseIf (hasEndDate And (j + 1) <= endMonth) Or Not hasEndDate Then
+                If Cells(i, j + 41) = 0 Then
+                    Cells(i, j + 41).Interior.Color = RGB(244, 113, 116)
+                    errorArray(i) = True
+                    errorFlag = True
+                End If
+                If Cells(i, j + 54) = 0 Then
+                    Cells(i, j + 54).Interior.Color = RGB(244, 113, 116)
+                    errorArray(i) = True
+                    errorFlag = True
+                End If
+            End If
+            
+            'Check After Promo End Date
+            If hasEndDate And (j + 1) > endMonth Then
+                '% Stores Selling
+                If Cells(i, j + 41) <> 0 Then
+                    Cells(i, j + 41).Interior.Color = RGB(244, 113, 116)
+                    errorArray(i) = True
+                    errorFlag = True
+                End If
+                'Units Per Store
+                If Cells(i, j + 54) <> 0 Then
+                    Cells(i, j + 54).Interior.Color = RGB(244, 113, 116)
+                    errorArray(i) = True
+                    errorFlag = True
+                End If
+            End If
+            
+            'Output
+                'Total Store Count * % Stores Selling * Units Per Store
+                num = Cells(i, 39) * Cells(i, j + 41) * Cells(i, j + 54)
+                 'Scale Down Month of Ship Date
+                If startMonth = (j + 1) Then
+                    Select Case WorksheetFunction.IsoWeekNum(startDate)
+                        Case 1, 5, 9, 14, 18, 22, 27, 31, 35, 40, 44, 48
+                            num = num * 1
+                        Case 10, 23, 36, 49
+                            num = num * 0.8
+                        Case 2, 6, 15, 19, 28, 32, 41, 45
+                            num = num * 0.75
+                        Case 11, 24, 37, 50
+                            num = num * 0.6
+                        Case 3, 7, 16, 20, 29, 33, 42, 46
+                            num = num * 0.5
+                        Case 12, 25, 38, 51
+                            num = num * 0.4
+                        Case 4, 8, 17, 21, 30, 34, 43, 47
+                            num = num * 0.25
+                        Case 13, 26, 39, 52
+                            num = num * 0.2
+                    End Select
+                End If
+                'Scale Down Month of Promo End Date
+                If hasEndDate And endMonth = (j + 1) Then
+                    Select Case WorksheetFunction.IsoWeekNum(endDate)
+                        Case 4, 8, 13, 17, 21, 26, 30, 34, 39, 43, 47, 52
+                            num = num * 1
+                        Case 12, 25, 38, 51
+                            num = num * 0.8
+                        Case 3, 7, 16, 20, 29, 33, 42, 46
+                            num = num * 0.75
+                        Case 11, 24, 37, 50
+                            num = num * 0.6
+                        Case 2, 6, 15, 19, 28, 32, 41, 45
+                            num = num * 0.5
+                        Case 10, 23, 36, 49
+                            num = num * 0.4
+                        Case 1, 5, 14, 18, 27, 31, 40, 44
+                            num = num * 0.25
+                        Case 9, 22, 35, 48
+                            num = num * 0.2
+                    End Select
+                End If
+                'Output Monthly Unit Forecast
+                Cells(i, j + 67) = num
+                'Update yearlySum
+                yearlySum = yearlySum + num
+        Next 'End Month Loop
+            
+Line:
+            
+        'Output Yearly Unit Forecast
+        If errorArray(i) = False Then
+            Cells(i, 79) = yearlySum '2024 Units
+            Cells(i, 81) = Cells(i, 79) * (1 + Cells(i, 80)) '2025 Units
+            Cells(i, 83) = Cells(i, 81) * (1 + Cells(i, 82)) '2026 Units
+        Else
+            'Highlight SKU with Error in Red
+            Cells(i, 4).Interior.Color = RGB(244, 113, 116)
+            For j = 0 To 11
+                Cells(i, j + 67).ClearContents
+            Next
+            Cells(i, 79).ClearContents
+            Cells(i, 81).ClearContents
+            Cells(i, 83).ClearContents
+        End If
+Next 'End Row Loop
+
+'Output Message Box if Error is Found
+For i = 5 To (numRows + 4)
+    If errorArray(i) Then
+        MsgBox "Please correct errors highlighted in red."
+        End
+    End If
+Next
+
+
+End Sub
